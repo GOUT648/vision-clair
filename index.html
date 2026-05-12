@@ -1,0 +1,2565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLAIR — AI Sign Language System</title>
+  <meta name="description" content="Real-time AI sign language recognition. See every sign. Speak every word." />
+  <meta property="og:title"       content="CLAIR — AI Sign Language System" />
+  <meta property="og:description" content="Real-time computer vision that reads sign language and speaks it aloud." />
+
+  <!-- FONTS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+
+  <style>
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     TOKENS  — edit here to retheme the entire site
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  :root {
+    /* Palette */
+    --ink:        #08090c;
+    --ink2:       #0f1117;
+    --ink3:       #181c26;
+    --surface:    rgba(255,255,255,0.04);
+    --border:     rgba(255,255,255,0.08);
+    --border-hi:  rgba(99,179,237,0.45);
+    --blue:       #63b3ed;
+    --blue-dim:   #2d6a9f;
+    --blue-glow:  rgba(99,179,237,0.18);
+    --white:      #f7f8fc;
+    --grey:       #8a90a2;
+    --grey-faint: #2a2d38;
+    /* Type */
+    --f-display: 'Syne', sans-serif;
+    --f-body:    'DM Sans', sans-serif;
+    --f-mono:    'DM Mono', monospace;
+
+    /* Layout */
+    --max:     1200px;
+    --pad:     clamp(20px, 5vw, 48px);
+    --section: clamp(80px, 12vw, 140px);
+  }
+
+  /* ── Reset ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    background: var(--ink);
+    color: var(--white);
+    font-family: var(--f-body);
+    font-weight: 300;
+    overflow-x: hidden;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  img, video { max-width: 100%; display: block; }
+  a { color: inherit; text-decoration: none; }
+  ul { list-style: none; }
+  button { cursor: pointer; background: none; border: none; font: inherit; color: inherit; }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: var(--ink); }
+  ::-webkit-scrollbar-thumb { background: var(--blue-dim); }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     PARTICLES  (fixed layer, always behind everything)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  #particles-js {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── Page wrap above particles ─────────────────── */
+  .site { position: relative; z-index: 1; }
+
+  /* ── Container ─────────────────────────────────── */
+  .wrap {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 var(--pad);
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     NAVIGATION
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  #nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 200;
+    padding: 24px 0;
+    transition: background .4s, padding .4s, border-color .4s;
+    border-bottom: 1px solid transparent;
+  }
+  #nav.stuck {
+    background: rgba(8,9,12,0.88);
+    backdrop-filter: blur(18px) saturate(1.4);
+    padding: 16px 0;
+    border-bottom-color: var(--border);
+  }
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 var(--pad);
+  }
+
+  /* Logo — replace inner <img> with your own logo file */
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .nav-logo-img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    /* ▼ REPLACE src IN HTML with your logo icon path */
+  }
+  .nav-logo-text {
+    font-family: var(--f-display);
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    color: var(--white);
+  }
+  .nav-logo-text span { color: var(--blue); }
+
+  .nav-links {
+    display: flex;
+    gap: 36px;
+  }
+  .nav-links a {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--grey);
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+
+  /* Primary CTA button */
+  .btn-nav {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border: 1px solid var(--blue-dim);
+    color: var(--blue);
+    position: relative;
+    overflow: hidden;
+    transition: color .3s, border-color .3s;
+    display: inline-block;
+  }
+  .btn-nav::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--blue);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .32s ease;
+    z-index: -1;
+  }
+  .btn-nav:hover { color: var(--ink); border-color: var(--blue); }
+  .btn-nav:hover::before { transform: scaleX(1); }
+
+  /* Hamburger */
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .hamburger span {
+    display: block;
+    width: 22px;
+    height: 1px;
+    background: var(--white);
+    transition: .3s;
+  }
+
+  /* Mobile drawer */
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--ink);
+    z-index: 500;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+  }
+  .mobile-nav.open { display: flex; }
+  .mobile-nav a {
+    font-family: var(--f-display);
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    font-weight: 700;
+    color: var(--grey);
+    letter-spacing: 0.04em;
+    transition: color .2s;
+  }
+  .mobile-nav a:hover { color: var(--white); }
+  .close-btn {
+    position: absolute;
+    top: 24px; right: var(--pad);
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--grey);
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     HERO  — full-bleed, image or video background
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 0 80px;
+    overflow: hidden;
+  }
+
+  /* ╔══════════════════════════════════════════════════╗
+     ║  HERO BACKGROUND                                ║
+     ║  Method A — image:                              ║
+     ║    Add to .hero-bg-media:                       ║
+     ║    <img src="assets/images/hero-bg.jpg"         ║
+     ║         alt="" class="hero-bg-img">             ║
+     ║                                                 ║
+     ║  Method B — video (recommended):                ║
+     ║    <video class="hero-bg-vid" autoplay muted    ║
+     ║           loop playsinline>                     ║
+     ║      <source src="assets/videos/hero.mp4"       ║
+     ║              type="video/mp4">                  ║
+     ║    </video>                                     ║
+     ╚══════════════════════════════════════════════════╝ */
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .hero-bg-media {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  /* When you drop an img or video inside .hero-bg-media,
+     these rules make it fill perfectly */
+  .hero-bg-media > img,
+  .hero-bg-media > video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+  /* Gradient overlay — always sits on top of background media */
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to top,  rgba(8,9,12,1)    0%,
+                                rgba(8,9,12,0.55) 40%,
+                                rgba(8,9,12,0.2)  70%,
+                                rgba(8,9,12,0.45) 100%),
+      linear-gradient(to right, rgba(8,9,12,0.7) 0%, transparent 60%);
+    z-index: 1;
+  }
+  /* Fallback gradient — visible when no media is placed */
+  .hero-bg-fallback {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 70% at 70% 40%,
+        rgba(99,179,237,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 80% at 20% 80%,
+        rgba(99,179,237,0.05) 0%, transparent 55%);
+  }
+
+  /* Hero content */
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 var(--pad);
+    width: 100%;
+  }
+  .hero-label {
+    font-family: var(--f-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    opacity: 0;
+    animation: fade-up .8s .2s ease forwards;
+  }
+  .hero-label::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--blue);
+    flex-shrink: 0;
+  }
+  .hero-h1 {
+    font-family: var(--f-display);
+    font-size: clamp(3.8rem, 9vw, 9rem);
+    font-weight: 800;
+    line-height: .93;
+    letter-spacing: -.02em;
+    color: var(--white);
+    margin-bottom: 36px;
+    max-width: 900px;
+    opacity: 0;
+    animation: fade-up .9s .35s ease forwards;
+  }
+  .hero-h1 em {
+    font-style: normal;
+    color: var(--blue);
+  }
+  .hero-body {
+    font-size: clamp(.95rem, 1.5vw, 1.15rem);
+    color: var(--grey);
+    max-width: 480px;
+    margin-bottom: 48px;
+    line-height: 1.8;
+    opacity: 0;
+    animation: fade-up .9s .5s ease forwards;
+  }
+  .hero-body strong { color: var(--white); font-weight: 500; }
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fade-up .9s .65s ease forwards;
+  }
+
+  /* Big CTA buttons */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: var(--blue);
+    color: var(--ink);
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 400;
+    transition: background .25s, transform .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.12);
+    opacity: 0;
+    transition: opacity .25s;
+  }
+  .btn-primary:hover { background: #88c8f0; transform: translateY(-2px); }
+  .btn-primary:hover::after { opacity: 1; }
+
+  /* ▼ Icon slot inside button — place a 16×16 SVG or PNG here */
+  .btn-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 32px;
+    border: 1px solid var(--border);
+    color: var(--grey);
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: border-color .25s, color .25s, transform .2s;
+  }
+  .btn-ghost:hover {
+    border-color: rgba(255,255,255,0.3);
+    color: var(--white);
+    transform: translateY(-2px);
+  }
+
+  /* Hero scroll indicator */
+  .scroll-hint {
+    position: absolute;
+    bottom: 28px;
+    right: var(--pad);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--grey-faint);
+    writing-mode: vertical-rl;
+    opacity: 0;
+    animation: fade-up 1s 1.2s ease forwards;
+  }
+  .scroll-line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, var(--grey-faint), transparent);
+    animation: grow-line 1.5s 1.5s ease forwards;
+    transform-origin: top;
+    transform: scaleY(0);
+  }
+  @keyframes grow-line {
+    to { transform: scaleY(1); }
+  }
+
+  /* Stats bar inside hero */
+  .hero-stats {
+    display: flex;
+    gap: 48px;
+    margin-top: 60px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fade-up .9s .8s ease forwards;
+  }
+  .stat-val {
+    font-family: var(--f-display);
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1;
+  }
+  .stat-val span { color: var(--blue); }
+  .stat-lbl {
+    font-family: var(--f-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--grey);
+    margin-top: 5px;
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     MARQUEE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .marquee-band {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 0;
+    overflow: hidden;
+    background: rgba(99,179,237,0.025);
+  }
+  .marquee-inner {
+    display: flex;
+    white-space: nowrap;
+    animation: marquee-scroll 32s linear infinite;
+  }
+  .marquee-inner:hover { animation-play-state: paused; }
+  .m-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--grey-faint);
+    padding: 0 36px;
+  }
+  .m-dot {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--blue);
+    margin-right: 36px;
+    flex-shrink: 0;
+  }
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION COMMONS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .section { padding: var(--section) 0; }
+
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 20px;
+  }
+  .section-h {
+    font-family: var(--f-display);
+    font-size: clamp(2.4rem, 5vw, 5rem);
+    font-weight: 800;
+    line-height: .96;
+    letter-spacing: -.02em;
+    color: var(--white);
+    margin-bottom: 24px;
+  }
+  .section-p {
+    font-size: 1.05rem;
+    color: var(--grey);
+    max-width: 520px;
+    line-height: 1.82;
+  }
+
+  /* Reveal animation */
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .reveal.in { opacity: 1; transform: none; }
+  .reveal.delay-1 { transition-delay: .12s; }
+  .reveal.delay-2 { transition-delay: .24s; }
+  .reveal.delay-3 { transition-delay: .36s; }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     FULL-BLEED STATEMENT (Bradford-style big text reveal)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .statement {
+    padding: clamp(60px, 10vw, 120px) 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .statement-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  /* ╔══════════════════════════════════════════════════╗
+     ║  STATEMENT SECTION BACKGROUND                   ║
+     ║  Place an image here:                           ║
+     ║  <img src="assets/images/statement-bg.jpg"      ║
+     ║       alt="" class="statement-bg-img">          ║
+     ╚══════════════════════════════════════════════════╝ */
+  .statement-bg > img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0.12;
+  }
+  .statement-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, var(--ink) 0%, rgba(8,9,12,0.4) 60%, var(--ink) 100%);
+  }
+  .statement-text {
+    position: relative;
+    z-index: 1;
+    font-family: var(--f-display);
+    font-size: clamp(2.2rem, 5.5vw, 5.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    color: var(--white);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 var(--pad);
+    text-align: center;
+  }
+  .statement-text em {
+    font-style: normal;
+    color: var(--blue);
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     FEATURES
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .features-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 64px;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+  .feature-card {
+    background: var(--ink2);
+    padding: 44px 36px 36px;
+    position: relative;
+    overflow: hidden;
+    transition: background .3s;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .feature-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--blue);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .4s ease;
+  }
+  .feature-card:hover { background: var(--ink3); }
+  .feature-card:hover::after { transform: scaleX(1); }
+
+  /* ╔══════════════════════════════════════════════════════╗
+     ║  FEATURE ICONS                                      ║
+     ║  Each .feature-icon div is an image slot.          ║
+     ║  Replace the inner <div class="icon-ph"> with:     ║
+     ║  <img src="assets/icons/icon-hand.svg" alt="">      ║
+     ║  Recommended size: 48×48 SVG or PNG                ║
+     ╚══════════════════════════════════════════════════════╝ */
+  .feature-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+  }
+  .feature-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  /* Placeholder shown until you add your icon image */
+  .icon-ph {
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(232,64,64,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(232,64,64,0.07);
+  }
+  .icon-ph::after {
+    color: rgba(232,64,64,0.5);
+  }
+  .icon-ph::after {
+    content: attr(data-label);
+    font-family: var(--f-mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
+    color: var(--grey-faint);
+    text-transform: uppercase;
+  }
+
+  .feature-num {
+    position: absolute;
+    top: 24px; right: 24px;
+    font-family: var(--f-display);
+    font-size: 4.5rem;
+    font-weight: 800;
+    color: var(--grey-faint);
+    line-height: 1;
+    opacity: .35;
+    user-select: none;
+  }
+  .feature-name {
+    font-family: var(--f-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: var(--white);
+  }
+  .feature-desc {
+    font-size: .92rem;
+    color: var(--grey);
+    line-height: 1.75;
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SPLIT SECTION (How It Works)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(40px, 8vw, 100px); align-items: center; }
+  .split.rev > *:first-child { order: 2; }
+  .split.rev > *:last-child  { order: 1; }
+
+  /* ╔══════════════════════════════════════════════════╗
+     ║  SPLIT MEDIA SLOT                               ║
+     ║  Drop your screenshot or video here:            ║
+     ║                                                 ║
+     ║  Screenshot:                                    ║
+     ║  <img src="assets/images/screen-1.jpg"          ║
+     ║       alt="CLAIR running"                       ║
+     ║       class="split-media-img">                  ║
+     ║                                                 ║
+     ║  Video:                                         ║
+     ║  <video class="split-media-vid" autoplay muted  ║
+     ║         loop playsinline>                       ║
+     ║    <source src="assets/videos/demo.mp4"         ║
+     ║            type="video/mp4">                    ║
+     ║  </video>                                       ║
+     ╚══════════════════════════════════════════════════╝ */
+  .media-frame {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: var(--ink2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .media-frame > img,
+  .media-frame > video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* Scanline overlay */
+  .media-frame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,.06) 3px,
+      rgba(0,0,0,.06) 4px
+    );
+    pointer-events: none;
+  }
+  /* Corner accent */
+  .media-frame::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 60px; height: 60px;
+    border-top: 1px solid var(--blue-dim);
+    border-left: 1px solid var(--blue-dim);
+    z-index: 3;
+    pointer-events: none;
+  }
+  .media-tag {
+    position: absolute;
+    bottom: 0; right: 0;
+    z-index: 4;
+    font-family: var(--f-mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 7px 12px;
+    background: var(--ink);
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    color: var(--grey);
+  }
+  /* Placeholder label inside media frame */
+  .media-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 1;
+  }
+  /* ╔══════════════════════════════════════════════════╗
+     ║  MEDIA PLACEHOLDER IMAGE SLOT                   ║
+     ║  Replace .ph-img div with:                      ║
+     ║  <img src="your-screenshot.jpg" alt="">         ║
+     ╚══════════════════════════════════════════════════╝ */
+  .ph-img {
+    width: 80px;
+    height: 60px;
+    border: 1px dashed var(--grey-faint);
+  }
+  .ph-label {
+    font-family: var(--f-mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--grey-faint);
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  /* Steps list */
+  .steps { display: flex; flex-direction: column; }
+  .step {
+    display: flex;
+    gap: 24px;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--grey-faint);
+    transition: padding-left .3s;
+  }
+  .step:first-child { padding-top: 0; }
+  .step:last-child { border-bottom: none; }
+  .step:hover { padding-left: 6px; }
+  .step-n {
+    font-family: var(--f-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--blue-dim);
+    line-height: 1;
+    min-width: 48px;
+    flex-shrink: 0;
+    opacity: .6;
+  }
+  .step-title {
+    font-family: var(--f-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+  .step-desc { font-size: .9rem; color: var(--grey); line-height: 1.75; }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     GALLERY  (full-width image/video grid)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .gallery-wrap { padding: var(--section) 0; }
+  .gallery-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+  /* ╔══════════════════════════════════════════════════════╗
+     ║  GALLERY GRID — 3 slots                             ║
+     ║  Each .gallery-cell is an image or video slot.      ║
+     ║  Replace the inner .gallery-ph with:               ║
+     ║    <img src="assets/images/shot-1.jpg" alt="...">   ║
+     ║  or                                                 ║
+     ║    <video autoplay muted loop playsinline>          ║
+     ║      <source src="assets/videos/clip.mp4">         ║
+     ║    </video>                                         ║
+     ╚══════════════════════════════════════════════════════╝ */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: 5fr 3fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 4px;
+  }
+  .gallery-cell {
+    position: relative;
+    background: var(--ink2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .gallery-cell:first-child {
+    grid-row: span 2;
+    aspect-ratio: 16 / 10;
+  }
+  .gallery-cell:not(:first-child) { aspect-ratio: 16 / 9; }
+  .gallery-cell > img,
+  .gallery-cell > video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .55s ease;
+  }
+  .gallery-cell:hover > img,
+  .gallery-cell:hover > video { transform: scale(1.04); }
+  .gallery-ph {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .gallery-ph .ph-box {
+    width: 56px;
+    height: 42px;
+    border: 1px dashed var(--grey-faint);
+  }
+  .gallery-ph p {
+    font-family: var(--f-mono);
+    font-size: .5rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--grey-faint);
+    text-align: center;
+    line-height: 1.7;
+  }
+  .gallery-label {
+    position: absolute;
+    bottom: 12px; left: 12px;
+    font-family: var(--f-mono);
+    font-size: .52rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--grey);
+    background: rgba(8,9,12,.82);
+    backdrop-filter: blur(6px);
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     DEMO  (browser camera test)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .demo-section { background: var(--ink2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(40px, 8vw, 80px); align-items: start; }
+  .demo-screen {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  #dv { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+  #dc { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .demo-gate {
+    position: absolute;
+    inset: 0;
+    background: rgba(8,9,12,.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 10;
+    transition: opacity .4s;
+  }
+  .demo-gate.gone { opacity: 0; pointer-events: none; }
+
+  /* ╔══════════════════════════════════════════════════╗
+     ║  DEMO GATE IMAGE SLOT                           ║
+     ║  Replace .demo-gate-img with your preview img:  ║
+     ║  <img src="assets/images/demo-preview.jpg"      ║
+     ║       alt="" class="demo-gate-still">           ║
+     ╚══════════════════════════════════════════════════╝ */
+  .demo-gate-img {
+    width: 80px;
+    height: 60px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .demo-gate-img img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .demo-gate h3 {
+    font-family: var(--f-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  .demo-gate p {
+    font-size: .88rem;
+    color: var(--grey);
+    text-align: center;
+    max-width: 240px;
+    line-height: 1.7;
+  }
+  .demo-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(8,9,12,.88);
+    border-top: 1px solid var(--border);
+    z-index: 5;
+  }
+  .demo-letter { font-family: var(--f-display); font-size: 2.8rem; font-weight: 800; color: var(--blue); line-height: 1; }
+  .demo-word   { font-family: var(--f-mono); font-size: .7rem; color: var(--grey); letter-spacing: .1em; }
+  .demo-pct    { font-family: var(--f-mono); font-size: .65rem; color: var(--blue); letter-spacing: .12em; }
+
+  .demo-info { display: flex; flex-direction: column; gap: 28px; }
+  .demo-tag {
+    font-family: var(--f-mono);
+    font-size: .6rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--blue);
+    padding: 5px 10px;
+    border: 1px solid var(--blue-dim);
+    display: inline-block;
+  }
+  .alpha-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .alpha-cell {
+    aspect-ratio: 1;
+    border: 1px solid var(--grey-faint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--f-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--grey-faint);
+    transition: all .2s;
+  }
+  .alpha-cell.lit { border-color: var(--blue); color: var(--blue); background: rgba(99,179,237,.07); }
+  .demo-disclaimer {
+    font-size: .82rem;
+    color: var(--grey);
+    line-height: 1.72;
+    padding: 16px;
+    border-left: 2px solid var(--blue-dim);
+    background: rgba(99,179,237,.03);
+  }
+  .demo-disclaimer a { color: var(--blue); text-decoration: underline; }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     DOWNLOAD
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .dl-head { text-align: center; margin-bottom: 64px; }
+  .dl-head .section-p { margin: 0 auto; text-align: center; }
+
+  .dl-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--border);
+    margin-bottom: 4px;
+  }
+  .dl-card {
+    background: var(--ink2);
+    padding: 44px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    transition: background .3s;
+    overflow: hidden;
+  }
+  .dl-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--blue);
+    transform: scaleX(0);
+    transition: transform .4s ease;
+  }
+  .dl-card:hover { background: var(--ink3); }
+  .dl-card:hover::after { transform: scaleX(1); }
+  .dl-card.active {
+    background: var(--ink3);
+    border: 1px solid var(--blue-dim);
+  }
+  .dl-card.active::before {
+    content: 'YOUR OS';
+    position: absolute;
+    top: 14px; right: 14px;
+    font-family: var(--f-mono);
+    font-size: .52rem;
+    letter-spacing: .2em;
+    color: var(--blue);
+    border: 1px solid var(--blue-dim);
+    padding: 3px 7px;
+  }
+
+  /* ╔══════════════════════════════════════════════════╗
+     ║  OS ICON SLOTS                                  ║
+     ║  Replace each .os-icon-ph with:                 ║
+     ║  <img src="assets/icons/windows.svg"            ║
+     ║       alt="Windows" class="os-icon-img">        ║
+     ║  Recommended: 48×48 monochrome SVG              ║
+     ╚══════════════════════════════════════════════════╝ */
+  .os-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .os-icon img { width: 100%; height: 100%; object-fit: contain; }
+  .os-icon-ph {
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .os-icon-ph span {
+    font-family: var(--f-mono);
+    font-size: .48rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--grey-faint);
+  }
+
+  .os-name {
+    font-family: var(--f-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--white);
+  }
+  .os-ver {
+    font-family: var(--f-mono);
+    font-size: .6rem;
+    letter-spacing: .14em;
+    color: var(--grey-faint);
+    text-align: center;
+  }
+  .btn-dl {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid var(--border);
+    font-family: var(--f-mono);
+    font-size: .66rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--grey);
+    text-align: center;
+    margin-top: 6px;
+    position: relative;
+    overflow: hidden;
+    transition: color .3s, border-color .3s;
+    display: block;
+  }
+  .btn-dl span { position: relative; z-index: 2; transition: letter-spacing .3s; }
+  .btn-dl::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--blue);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .32s ease;
+    z-index: 1;
+  }
+  .btn-dl:hover { color: var(--ink); border-color: var(--blue); }
+  .btn-dl:hover span { letter-spacing: .22em; }
+  .btn-dl:hover::before { transform: scaleX(1); }
+  .dl-card.active .btn-dl { border-color: var(--blue-dim); color: var(--blue); }
+  .dl-card.active .btn-dl:hover { color: var(--ink); }
+
+  .install-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .install-step {
+    padding: 32px 28px;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .install-step:last-child { border-right: none; }
+  .install-n {
+    font-family: var(--f-display);
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--blue-dim);
+    line-height: 1;
+    margin-bottom: 14px;
+    opacity: .5;
+  }
+  .install-title {
+    font-family: var(--f-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+  .install-desc {
+    font-size: .85rem;
+    color: var(--grey);
+    line-height: 1.65;
+  }
+  .install-desc code {
+    font-family: var(--f-mono);
+    font-size: .8em;
+    color: var(--blue);
+    background: rgba(99,179,237,.08);
+    padding: 2px 6px;
+  }
+
+  .dl-github {
+    text-align: center;
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     CLAIR AI SECTION
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .ai-section 
+  .ai-split { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(40px, 8vw, 100px); align-items: center; }
+
+  /* ╔══════════════════════════════════════════════════╗
+     ║  CLAIR CHARACTER IMAGE SLOT                     ║
+     ║  Replace .char-slot with your character image:  ║
+     ║  <img src="assets/images/clair-char.png"        ║
+     ║       alt="CLAIR AI"                            ║
+     ║       class="char-img">                         ║
+     ║  Transparent PNG recommended.                   ║
+     ╚══════════════════════════════════════════════════╝ */
+  .char-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    position: relative;
+  }
+  .char-slot {
+    width: 200px;
+    height: 280px;
+    position: relative;
+  }
+  .char-slot > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 40px rgba(99,179,237,.35));
+    animation: float 4.5s ease-in-out infinite;
+  }
+  .char-glow {
+    position: absolute;
+    inset: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(99,179,237,.2) 0%, transparent 70%);
+    animation: pulse-g 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes pulse-g {
+    0%, 100% { opacity: .5; transform: scale(1); }
+    50%       { opacity: 1;  transform: scale(1.06); }
+  }
+  .char-name {
+    font-family: var(--f-display);
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    color: var(--white);
+  }
+  .char-name span { color: var(--blue); }
+  .char-tagline {
+    font-family: var(--f-mono);
+    font-size: .65rem;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: var(--grey);
+  }
+  .cmd-list {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--ink);
+  }
+  .cmd-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--grey-faint);
+    font-family: var(--f-mono);
+    font-size: .72rem;
+  }
+  .cmd-row:last-child { border-bottom: none; }
+  .cmd-prompt { color: var(--blue); flex-shrink: 0; }
+  .cmd-text   { color: var(--grey); }
+  .cmd-cursor {
+    display: inline-block;
+    width: 7px; height: 13px;
+    background: var(--blue);
+    margin-left: 2px;
+    animation: blink-c .9s step-end infinite;
+    vertical-align: middle;
+    opacity: 0;
+  }
+  .cmd-row:last-child .cmd-cursor { opacity: 1; }
+  @keyframes blink-c { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .mode-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    margin-bottom: 28px;
+  }
+  .mode-card {
+    background: var(--ink2);
+    padding: 24px 20px;
+    position: relative;
+    transition: background .3s;
+    overflow: hidden;
+  }
+  .mode-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--blue);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform .35s ease;
+  }
+  .mode-card:hover { background: var(--ink3); }
+  .mode-card:hover::before { transform: scaleY(1); }
+  .mode-badge {
+    font-family: var(--f-mono);
+    font-size: .58rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border: 1px solid;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+  .mb-normal { color: #4ade80; border-color: rgba(74,222,128,.35); }
+  .mb-tutor  { color: #60a5fa; border-color: rgba(96,165,250,.35); }
+  .mb-master { color: var(--blue); border-color: var(--blue-dim); }
+  .mb-auto   { color: #e879f9; border-color: rgba(232,121,249,.35); }
+  .mode-n { font-family: var(--f-display); font-size: 1.05rem; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+  .mode-d { font-size: .85rem; color: var(--grey); line-height: 1.65; }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     FOOTER
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 64px 0 36px;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2.5fr 1fr 1fr 1fr;
+    gap: 56px;
+    margin-bottom: 56px;
+  }
+  .footer-brand-name {
+    font-family: var(--f-display);
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    color: var(--white);
+    margin-bottom: 14px;
+  }
+  .footer-brand-name span { color: var(--blue); }
+  .footer-brand-p {
+    font-size: .9rem;
+    color: var(--grey);
+    line-height: 1.72;
+    max-width: 240px;
+    margin-bottom: 24px;
+  }
+  .footer-socials { display: flex; gap: 10px; }
+  .footer-soc {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--grey);
+    transition: border-color .2s, color .2s;
+  }
+  .footer-soc:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ╔══════════════════════════════════════════════════╗
+     ║  FOOTER SOCIAL ICONS                            ║
+     ║  Replace inner svg/text with your own icons:    ║
+     ║  <img src="assets/icons/github.svg" width="16"> ║
+     ╚══════════════════════════════════════════════════╝ */
+  .footer-soc-ph { font-family: var(--f-mono); font-size: .55rem; letter-spacing: .1em; }
+
+  .footer-col-t {
+    font-family: var(--f-mono);
+    font-size: .6rem;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--grey);
+    margin-bottom: 18px;
+  }
+  .footer-links { display: flex; flex-direction: column; gap: 9px; }
+  .footer-links a {
+    font-size: .88rem;
+    color: var(--grey);
+    transition: color .2s;
+  }
+  .footer-links a:hover { color: var(--white); }
+  .footer-bottom {
+    padding-top: 28px;
+    border-top: 1px solid var(--grey-faint);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .footer-copy {
+    font-family: var(--f-mono);
+    font-size: .58rem;
+    letter-spacing: .16em;
+    color: var(--grey-faint);
+  }
+  .footer-tags { display: flex; gap: 10px; }
+  .footer-tag {
+    font-family: var(--f-mono);
+    font-size: .52rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border: 1px solid var(--grey-faint);
+    color: var(--grey-faint);
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     KEYFRAMES
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-14px); }
+  }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     RESPONSIVE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  @media (max-width: 960px) {
+    .nav-links, .btn-nav { display: none; }
+    .hamburger { display: flex; }
+    .split, .ai-split { grid-template-columns: 1fr; gap: 48px; }
+    .split.rev > * { order: unset; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+    .dl-cards { grid-template-columns: 1fr; gap: 2px; }
+    .install-row { grid-template-columns: 1fr 1fr; }
+    .install-step { border-right: none; border-bottom: 1px solid var(--border); }
+    .install-step:last-child { border-bottom: none; }
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
+    .gallery-grid { grid-template-columns: 1fr; }
+    .gallery-cell:first-child { grid-row: unset; aspect-ratio: 16/9; }
+    .demo-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .install-row { grid-template-columns: 1fr; }
+    .hero-stats { gap: 28px; }
+    .alpha-grid { grid-template-columns: repeat(6, 1fr); }
+    .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+    .mode-cards { grid-template-columns: 1fr; }
+  }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ PARTICLES ══════════════ -->
+<div id="particles-js"></div>
+
+<!-- ══════════════ MOBILE NAV ════════════ -->
+<div class="mobile-nav" id="mobileNav">
+  <button class="close-btn" onclick="navClose()">Close</button>
+  <a href="#features"  onclick="navClose()">Features</a>
+  <a href="#how"       onclick="navClose()">How It Works</a>
+  <a href="#demo"      onclick="navClose()">Try Demo</a>
+  <li><a href="#pricing">Pricing</a></li>
+<li><a href="#donate">Donate</a></li>
+  <a href="#download"  onclick="navClose()">Download</a>
+  <a href="#clair-ai"  onclick="navClose()">CLAIR AI</a>
+  <!-- ▼ Update href to your GitHub repo -->
+  <a href="https://github.com/YOUR_USERNAME/YOUR_REPO" target="_blank">GitHub ↗</a>
+</div>
+
+<div class="site">
+
+  <!-- ════════════════ NAV ════════════════ -->
+  <nav id="nav">
+    <div class="nav-row">
+      <a href="#" class="nav-logo">
+        <!-- ▼▼▼ LOGO ICON — replace src with your icon file ▼▼▼
+             e.g. <img src="assets/icons/logo-mark.svg" alt="" class="nav-logo-img"> -->
+        <img src="assets/images/logo.png" alt="CLAIR" class="nav-logo-img">
+             
+        <span class="nav-logo-text">CL<span>AI</span>R</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="#demo">Demo</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="#clair-ai">CLAIR AI</a></li>
+      </ul>
+      <div class="nav-right">
+        <a href="https://github.com/GOUT648/vision-clair/archive/refs/heads/main.zip" class="your-button-class">
+    Download Vision-Clair
+</a>
+        <div class="hamburger" onclick="navOpen()">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ════════════════ HERO ════════════════ -->
+  <section class="hero" id="home">
+
+    <div class="hero-bg">
+      <!-- ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+           HERO BACKGROUND — drop your file inside this div
+
+           FOR AN IMAGE:
+             <img src="assets/images/hero-bg.jpg" alt=""
+                  style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+
+           FOR A VIDEO (best for high-impact):
+             <video autoplay muted loop playsinline
+                    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+               <source src="assets/videos/hero.mp4" type="video/mp4">
+             </video>
+      ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ -->
+      <div class="hero-bg-media">
+  <video autoplay muted loop playsinline>
+    <source src="assets/videos/hero.mp4" type="video/mp4">
+    </video>
+      </div>
+      <div class="hero-bg-fallback"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-label">Computer Vision · AI Sign Language Recognition</div>
+      <h1 class="hero-h1">
+        EVERY<br>SIGN,<br><em>SPOKEN.</em>
+      </h1>
+      <p class="hero-body">
+        <strong>CLAIR</strong> reads sign language through your webcam in real time,
+        builds your words, polishes them with AI, and speaks them aloud —
+        fully <strong>offline</strong>, adapting to your hands over time.
+      </p>
+      <div class="hero-actions">
+        <a href="#download" class="btn-primary">
+          <!-- ▼ Replace with your download icon SVG/PNG
+               <img src="assets/icons/download.svg" class="btn-icon" alt=""> -->
+          Download Free
+        </a>
+        <a href="#demo" class="btn-ghost">
+          <!-- ▼ Replace with your play icon
+               <img src="assets/icons/play.svg" class="btn-icon" alt=""> -->
+          Try Live Demo
+        </a>
+      </div>
+
+      <div class="hero-stats">
+        <div>
+          <div class="stat-val">26<span>+</span></div>
+          <div class="stat-lbl">ASL Letters</div>
+        </div>
+        <div>
+          <div class="stat-val">2</div>
+          <div class="stat-lbl">Languages</div>
+        </div>
+        <div>
+          <div class="stat-val">30<span>fps</span></div>
+          <div class="stat-lbl">Real-Time</div>
+        </div>
+        <div>
+          <div class="stat-val">0</div>
+          <div class="stat-lbl">Cloud Required</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      Scroll
+    </div>
+  </section>
+
+  <!-- ════════ MARQUEE STRIP ════════ -->
+  <div class="marquee-band" aria-hidden="true">
+    <div class="marquee-inner">
+      <span class="m-item"><span class="m-dot"></span>ASL Recognition</span>
+      <span class="m-item"><span class="m-dot"></span>BSL Recognition</span>
+      <span class="m-item"><span class="m-dot"></span>Adaptive Learning</span>
+      <span class="m-item"><span class="m-dot"></span>Air Drawing</span>
+      <span class="m-item"><span class="m-dot"></span>Voice Output</span>
+      <span class="m-item"><span class="m-dot"></span>Offline First</span>
+      <span class="m-item"><span class="m-dot"></span>Plugin System</span>
+      <span class="m-item"><span class="m-dot"></span>CLAIR AI Assistant</span>
+      <span class="m-item"><span class="m-dot"></span>Tutor Mode</span>
+      <span class="m-item"><span class="m-dot"></span>Open Source</span>
+      <!-- Duplicated for loop -->
+      <span class="m-item"><span class="m-dot"></span>ASL Recognition</span>
+      <span class="m-item"><span class="m-dot"></span>BSL Recognition</span>
+      <span class="m-item"><span class="m-dot"></span>Adaptive Learning</span>
+      <span class="m-item"><span class="m-dot"></span>Air Drawing</span>
+      <span class="m-item"><span class="m-dot"></span>Voice Output</span>
+      <span class="m-item"><span class="m-dot"></span>Offline First</span>
+      <span class="m-item"><span class="m-dot"></span>Plugin System</span>
+      <span class="m-item"><span class="m-dot"></span>CLAIR AI Assistant</span>
+      <span class="m-item"><span class="m-dot"></span>Tutor Mode</span>
+      <span class="m-item"><span class="m-dot"></span>Open Source</span>
+    </div>
+  </div>
+
+  <!-- ════════ STATEMENT ════════ -->
+  <div class="statement">
+    <div class="statement-bg">
+      <!-- ▼▼▼ STATEMENT SECTION BACKGROUND IMAGE
+           <img src="assets/images/statement-bg.jpg" alt=""> -->
+    </div>
+    <p class="statement-text reveal">
+      Sign language is not broken speech —<br>
+      it is <em>a complete language</em>,<br>
+      expressed through the hands.
+    </p>
+  </div>
+
+  <!-- ════════ FEATURES ════════ -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="features-head reveal">
+        <div>
+          <div class="eyebrow">What It Does</div>
+          <h2 class="section-h">EVERY FEATURE<br>YOU NEED</h2>
+        </div>
+        <p class="section-p" style="max-width:360px">
+          From real-time gesture recognition to an embedded AI voice assistant —
+          CLAIR is a complete sign language ecosystem, not just a detector.
+        </p>
+      </div>
+
+      <div class="features-grid reveal delay-1">
+
+        <div class="feature-card">
+          <div class="feature-num">01</div>
+          <div class="feature-icon">
+            <!-- ▼▼▼ FEATURE 1 ICON — replace with your icon
+                 <img src="assets/icons/icon-recognition.svg" alt=""> -->
+            <img src="assets/icons/live.png" alt="">
+          </div>
+          <div class="feature-name">Real-Time Recognition</div>
+          <p class="feature-desc">Detects ASL and BSL fingerspelling at 30 FPS via MediaPipe landmark tracking. Works on any webcam, no special hardware needed.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-num">02</div>
+          <div class="feature-icon">
+            <!-- ▼▼▼ FEATURE 2 ICON -->
+           <img src="assets/icons/adaptability.png" alt="">
+          </div>
+          <div class="feature-name">Adaptive Learning</div>
+          <p class="feature-desc">Trains silently on your exact signing style every session. The model personalises to your hand shape and improves over time.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-num">03</div>
+          <div class="feature-icon">
+            <!-- ▼▼▼ FEATURE 3 ICON -->
+            <img src="assets/icons/voice.png" alt="">
+          </div>
+          <div class="feature-name">AI Voice Engine</div>
+          <p class="feature-desc">Speaks your signed sentences through ElevenLabs expressive TTS or local pyttsx3. Polished by Gemini before output.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-num">04</div>
+          <div class="feature-icon">
+            <!-- ▼▼▼ FEATURE 4 ICON -->
+            <img src="assets/icons/point.png" alt="">
+          </div>
+          <div class="feature-name">Air Drawing</div>
+          <p class="feature-desc">Pinch to draw directly on the camera feed in real time. Multi-color strokes, smooth curves, fully gesture-controlled.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-num">05</div>
+          <div class="feature-icon">
+            <!-- ▼▼▼ FEATURE 5 ICON -->
+            <img src="assets/icons/teachings.png" alt="">
+          </div>
+          <div class="feature-name">Teach Mode</div>
+          <p class="feature-desc">Press T to open guided teaching. Show any gesture, label it, and it learns immediately. Build custom sign packs for any language.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-num">06</div>
+          <div class="feature-icon">
+            <!-- ▼▼▼ FEATURE 6 ICON -->
+            <img src="assets/icons/plug-in.png" alt="">
+          </div>
+          <div class="feature-name">Plugin System</div>
+          <p class="feature-desc">Drop a .json gesture pack into the plugins folder. Auto hot-reloaded every 5 seconds — zero restarts, zero code changes.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ HOW IT WORKS ════════ -->
+  <section class="section" id="how" style="border-top:1px solid var(--border)">
+    <div class="wrap">
+      <div class="split">
+
+        <div class="reveal">
+          <div class="media-frame">
+            <!-- ╔══════════════════════════════════════════╗
+                 ║  HOW IT WORKS — MAIN SCREENSHOT / VIDEO  ║
+                 ║                                          ║
+                 ║  Screenshot:                             ║
+                 ║  <img src="assets/images/screen-main.jpg"║
+                 ║       alt="CLAIR running">              ║
+                 ║                                          ║
+                 ║  Screen recording:                       ║
+                 ║  <video autoplay muted loop playsinline> ║
+                 ║    <source src="assets/videos/demo.mp4"> ║
+                 ║  </video>                                ║
+                 ╚══════════════════════════════════════════╝ -->
+            <div class="media-placeholder">
+              <div class="ph-img"></div>
+              <p class="ph-label">
+               <video autoplay muted loop playsinline>
+                   <source src="assets/videos/bruh.mp4"> 
+                  </video> 
+                <code style="font-family:var(--f-mono);font-size:.9em;color:var(--blue-dim)">assets/images/screen-main.jpg</code>
+              </p>
+            </div>
+            <div class="media-tag">CLAIR v1.0 — Live</div>
+          </div>
+        </div>
+
+        <div class="reveal delay-1">
+          <div class="eyebrow">Under The Hood</div>
+          <h2 class="section-h">HOW IT<br>WORKS</h2>
+          <div class="steps">
+            <div class="step">
+              <div class="step-n">01</div>
+              <div>
+                <div class="step-title">Camera Input</div>
+                <p class="step-desc">MediaPipe detects 21 hand landmarks per hand at 30 FPS with sub-5ms latency on CPU.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-n">02</div>
+              <div>
+                <div class="step-title">Feature Extraction</div>
+                <p class="step-desc">167 normalised geometric features are computed — hand-size independent, rotation robust.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-n">03</div>
+              <div>
+                <div class="step-title">Dual Inference</div>
+                <p class="step-desc">Rule-based scorer boots instantly. Adaptive SGD model takes over as it learns your style.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-n">04</div>
+              <div>
+                <div class="step-title">Word Builder + Voice</div>
+                <p class="step-desc">Committed letters form words, polished by Gemini, spoken aloud through ElevenLabs or local TTS.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ GALLERY ════════ -->
+  <section class="gallery-wrap" style="border-top:1px solid var(--border)">
+    <div class="wrap">
+      <div class="gallery-head reveal">
+        <div>
+          <div class="eyebrow">In Action</div>
+          <h2 class="section-h">SEE IT<br>RUNNING</h2>
+        </div>
+        <p class="section-p" style="max-width:300px;text-align:right">
+          Real screenshots and recordings from the live system.
+        </p>
+      </div>
+
+      <div class="gallery-grid reveal delay-1">
+
+        <div class="gallery-cell">
+          <!-- ╔══════════════════════════════════════════╗
+               ║  GALLERY SLOT 1 — Large main screenshot  ║
+               ║  <img src="assets/images/shot-main.jpg"  ║
+               ║       alt="Main interface">              ║
+               ╚══════════════════════════════════════════╝ -->
+          <div class="gallery-ph">
+            <div class="ph-box"></div>
+            <p>Main interface screenshot<br>
+               <code style="font-size:.85em;color:var(--blue-dim)">assets/images/shot-main.jpg</code></p>
+          </div>
+          <span class="gallery-label">Main Interface</span>
+        </div>
+
+        <div class="gallery-cell">
+          <!-- ╔═══════════════════════════════════════╗
+               ║  GALLERY SLOT 2                        ║
+               ║  <img src="assets/images/shot-asl.jpg" ║
+               ║       alt="ASL detection">             ║
+               ╚═══════════════════════════════════════╝ -->
+          <div class="gallery-ph">
+            <div class="ph-box"></div>
+            <p>ASL detection<br>
+               <code style="font-size:.85em;color:var(--blue-dim)">assets/images/shot-asl.jpg</code></p>
+          </div>
+          <span class="gallery-label">ASL Detection</span>
+        </div>
+
+        <div class="gallery-cell">
+          <!-- ╔════════════════════════════════════════╗
+               ║  GALLERY SLOT 3                         ║
+               ║  <img src="assets/images/shot-draw.jpg" ║
+               ║       alt="Air drawing">               ║
+               ╚════════════════════════════════════════╝ -->
+          <div class="gallery-ph">
+            <div class="ph-box"></div>
+            <p>Air drawing mode<br>
+               <code style="font-size:.85em;color:var(--blue-dim)">assets/images/shot-draw.jpg</code></p>
+          </div>
+          <span class="gallery-label">Air Drawing</span>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ DEMO ════════ -->
+  <section class="section demo-section" id="demo">
+    <div class="wrap">
+      <div class="demo-grid">
+
+        <div class="reveal">
+          <div class="demo-screen">
+            <video id="dv" autoplay playsinline></video>
+            <canvas id="dc"></canvas>
+            <div class="demo-gate" id="dg">
+              <div class="demo-gate-img">
+                <!-- ▼▼▼ DEMO PREVIEW THUMBNAIL
+                     <img src="assets/images/demo-thumb.jpg" alt=""> -->
+              </div>
+              <h3>Live Browser Demo</h3>
+              <p>Allow camera access to test ASL recognition directly in your browser.</p>
+              <button class="btn-primary" onclick="startDemo()" style="margin-top:8px">Start Camera</button>
+            </div>
+            <div class="demo-bar">
+              <div class="demo-letter" id="dl-l">—</div>
+              <div class="demo-word"   id="dl-w">Waiting for hand…</div>
+              <div class="demo-pct"    id="dl-p">0%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-info reveal delay-1">
+          <div>
+            <div class="demo-tag">Browser Preview</div>
+            <h2 class="section-h" style="font-size:clamp(2rem,4vw,3.4rem);margin-top:14px">TRY IT<br>NOW</h2>
+            <p class="section-p" style="font-size:.92rem;margin-top:12px">
+              This lightweight preview uses your webcam to show real-time overlay feedback.
+              No data leaves your device. The full desktop app includes adaptive ML and voice output.
+            </p>
+          </div>
+
+          <div>
+            <div class="demo-tag" style="margin-bottom:14px">ASL Alphabet</div>
+            <div class="alpha-grid" id="alpha"></div>
+          </div>
+
+          <div class="demo-disclaimer">
+            Your camera feed is processed locally in your browser and is never uploaded.
+            For full AI polish, ElevenLabs voice, and adaptive learning —
+            <a href="#download">download the desktop app</a>.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ DOWNLOAD ════════ -->
+  <section class="section" id="download" style="border-top:1px solid var(--border)">
+    <div class="wrap">
+      <div class="dl-head reveal">
+        <div class="eyebrow">Get Started</div>
+        <h2 class="section-h">DOWNLOAD<br>FREE</h2>
+        <p class="section-p">Open source. No account. No cloud. Runs entirely on your machine.</p>
+      </div>
+
+      <div class="dl-cards reveal delay-1">
+
+        <div class="dl-card" id="os-win">
+          <div class="os-icon">
+            <!-- ▼▼▼ WINDOWS ICON
+                 <img src="assets/icons/windows.svg" alt="Windows"> -->
+            <div class="os-icon-ph"><span>Win</span></div>
+          </div>
+          <div class="os-name">WINDOWS</div>
+          <div class="os-ver">Windows 10 / 11 — x64</div>
+          <!-- ▼ Update this URL to your actual GitHub release -->
+          <a href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest/download/clair-windows.zip"
+             class="btn-dl"><span>Download .zip</span></a>
+        </div>
+
+        <div class="dl-card" id="os-mac">
+          <div class="os-icon">
+            <!-- ▼▼▼ MACOS ICON
+                 <img src="assets/icons/apple.svg" alt="macOS"> -->
+            <div class="os-icon-ph"><span>Mac</span></div>
+          </div>
+          <div class="os-name">MACOS</div>
+          <div class="os-ver">macOS 12+ — Intel + Apple Silicon</div>
+          <a href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest/download/clair-macos.zip"
+             class="btn-dl"><span>Download .zip</span></a>
+        </div>
+
+        <div class="dl-card" id="os-linux">
+          <div class="os-icon">
+            <!-- ▼▼▼ LINUX ICON
+                 <img src="assets/icons/linux.svg" alt="Linux"> -->
+            <div class="os-icon-ph"><span>Linux</span></div>
+          </div>
+          <div class="os-name">LINUX</div>
+          <div class="os-ver">Ubuntu 22.04+ — Debian — Arch</div>
+          <a href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest/download/clair-linux.tar.gz"
+             class="btn-dl"><span>Download .tar.gz</span></a>
+        </div>
+
+      </div>
+
+      <div class="install-row reveal delay-2">
+        <div class="install-step">
+          <div class="install-n">01</div>
+          <div class="install-title">Download</div>
+          <p class="install-desc">Grab the archive for your OS above.</p>
+        </div>
+        <div class="install-step">
+          <div class="install-n">02</div>
+          <div class="install-title">Extract</div>
+          <p class="install-desc">Unzip into any folder. No installer required.</p>
+        </div>
+        <div class="install-step">
+          <div class="install-n">03</div>
+          <div class="install-title">Install Deps</div>
+          <p class="install-desc">Run <code>pip install -r requirements.txt</code> once.</p>
+        </div>
+        <div class="install-step">
+          <div class="install-n">04</div>
+          <div class="install-title">Run</div>
+          <p class="install-desc">Execute <code>python main.py</code> and start signing.</p>
+        </div>
+      </div>
+
+      <div class="dl-github reveal delay-3">
+        <a href="https://github.com/YOUR_USERNAME/YOUR_REPO" target="_blank" class="btn-ghost">
+          View Source on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ CLAIR AI ════════ -->
+  <section class="section" id="clair-ai" style="border-top:1px solid var(--border)">
+    <div class="wrap">
+      <div class="ai-split">
+
+        <div class="reveal">
+          <div class="eyebrow">The AI Core</div>
+          <h2 class="section-h">MEET<br>CLAIR</h2>
+          <p class="section-p" style="margin-bottom:40px">
+            An embedded AI assistant that listens, understands context,
+            and controls every part of the system through natural voice commands.
+            Powered by local Ollama or Gemini — your choice.
+          </p>
+          <div class="mode-cards">
+            <div class="mode-card">
+              <div class="mode-badge mb-normal">Normal</div>
+              <div class="mode-n">Assist Mode</div>
+              <p class="mode-d">Answers questions, polishes signed sentences, and reads them aloud.</p>
+            </div>
+            <div class="mode-card">
+              <div class="mode-badge mb-tutor">Tutor</div>
+              <div class="mode-n">Tutor Mode</div>
+              <p class="mode-d">Guides you through alphabet lessons with live per-letter coaching.</p>
+            </div>
+            <div class="mode-card">
+              <div class="mode-badge mb-master">Master</div>
+              <div class="mode-n">Master Mode</div>
+              <p class="mode-d">Full voice control. Say the command — CLAIR executes it.</p>
+            </div>
+            <div class="mode-card">
+              <div class="mode-badge mb-auto">Auto</div>
+              <div class="mode-n">Autonomous</div>
+              <p class="mode-d">Chains tasks, auto-speaks on pause, schedules retraining independently.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="char-wrap reveal delay-2">
+          <div class="char-slot">
+            <div class="char-glow"></div>
+            <!-- ╔══════════════════════════════════════════╗
+                 ║  CLAIR CHARACTER IMAGE                   ║
+                 ║  Replace the img below with your own:    ║
+                 ║  <img src="assets/images/clair-char.png" ║
+                 ║       alt="CLAIR AI Assistant">          ║
+                 ║  Transparent PNG recommended.            ║
+                 ╚══════════════════════════════════════════╝ -->
+            <img src="assets/images/logo.png" alt="CLAIR"
+                 onerror="this.style.opacity='.15'">
+          </div>
+          <div class="char-name">CL<span>AI</span>R</div>
+          <div class="char-tagline">Offline · Adaptive · Always Listening</div>
+          <div class="cmd-list">
+            <div class="cmd-row"><span class="cmd-prompt">›</span><span class="cmd-text">"Switch to BSL"</span></div>
+            <div class="cmd-row"><span class="cmd-prompt">›</span><span class="cmd-text">"Speak my sentence"</span></div>
+            <div class="cmd-row"><span class="cmd-prompt">›</span><span class="cmd-text">"Start alphabet lesson"</span></div>
+            <div class="cmd-row"><span class="cmd-prompt">›</span><span class="cmd-text">"Retrain the model"</span></div>
+            <div class="cmd-row"><span class="cmd-prompt">›</span><span class="cmd-text">"What time is it?"<span class="cmd-cursor"></span></span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+<!-- ════════ DONATION ════════ -->
+  <section class="section donate-section" id="donate" style="border-top:1px solid var(--border);position:relative;overflow:hidden;">
+    <div class="donate-bg-glow"></div>
+    <div class="wrap" style="position:relative;z-index:1;">
+      <div class="donate-inner">
+        <div class="reveal">
+          <div class="eyebrow">Make A Difference</div>
+          <h2 class="section-h">HELP THE<br><em style="color:var(--blue)">DEAF COMMUNITY</em></h2>
+          <p class="section-p" style="margin-bottom:32px">
+            CLAIR was built to give a voice to those who sign.
+            Every donation directly funds development, accessibility research,
+            and free distribution of CLAIR to schools and deaf organisations worldwide.
+          </p>
+          <div class="donate-impact">
+            <div class="impact-row">
+              <div class="impact-dot"></div>
+              <span><strong style="color:var(--white)">$5</strong> — funds one week of server costs for free distribution</span>
+            </div>
+            <div class="impact-row">
+              <div class="impact-dot"></div>
+              <span><strong style="color:var(--white)">$20</strong> — sponsors one student's free licence for a year</span>
+            </div>
+            <div class="impact-row">
+              <div class="impact-dot"></div>
+              <span><strong style="color:var(--white)">$50</strong> — helps fund a new sign language pack for an underserved community</span>
+            </div>
+          </div>
+        </div>
+        <div class="donate-box reveal delay-2">
+          <div class="donate-box-label">Choose an amount</div>
+          <div class="donate-amounts" id="donateAmounts">
+            <button class="d-amt" onclick="setDonate(5)">$5</button>
+            <button class="d-amt" onclick="setDonate(10)">$10</button>
+            <button class="d-amt active" onclick="setDonate(20)">$20</button>
+            <button class="d-amt" onclick="setDonate(50)">$50</button>
+          </div>
+          <div class="donate-custom-row">
+            <span class="donate-sym">$</span>
+            <input class="donate-input" id="donateInput" type="number" value="20" min="1" placeholder="Custom amount" oninput="syncDonate(this.value)">
+          </div>
+          <div class="donate-note">100% goes to CLAIR development and deaf outreach</div>
+          <a class="btn-donate" id="donateBtn" href="https://paypal.me/8GOAT8/20" target="_blank" rel="noopener">
+            <span>Donate via PayPal</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/></svg>
+          </a>
+          <div class="donate-secure">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--grey)" style="flex-shrink:0"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            Secured by PayPal — no account required
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ PRICING ════════ -->
+  <section class="section" id="pricing" style="border-top:1px solid var(--border);">
+    <div class="wrap">
+
+      <div class="sale-banner reveal">
+        <div class="sale-pulse"></div>
+        <span class="sale-tag">LIMITED TIME</span>
+        <span class="sale-text">Launch sale — 40% off annual plans. Ends in <span id="sale-timer" class="sale-timer">--:--:--</span></span>
+      </div>
+
+      <div class="pricing-head reveal">
+        <div class="eyebrow">Get CLAIR</div>
+        <h2 class="section-h">SIMPLE,<br>HONEST PRICING</h2>
+        <p class="section-p" style="margin:0 auto;text-align:center;max-width:480px">
+          One purchase gets you the full desktop application.
+          The monthly plan keeps it updated and unlocks every future feature.
+        </p>
+      </div>
+
+      <div class="purchase-card reveal delay-1">
+        <div class="purchase-left">
+          <div class="purchase-label">One-Time Purchase</div>
+          <div class="purchase-price">$12<span class="purchase-period">/once</span></div>
+          <p class="purchase-desc">Full desktop application. Yours forever. No subscription required to use the core software.</p>
+          <ul class="purchase-list">
+            <li>Full ASL + BSL recognition</li>
+            <li>Adaptive learning engine</li>
+            <li>CLAIR AI assistant (local)</li>
+            <li>Air drawing mode</li>
+            <li>Lifetime access to v1.x</li>
+          </ul>
+        </div>
+        <div class="purchase-right">
+          <a class="btn-purchase" href="https://paypal.me/8GOAT8/12" target="_blank" rel="noopener">
+            Buy &amp; Download — $12
+          </a>
+          <div class="purchase-note">Payment via PayPal — download link sent on completion</div>
+        </div>
+      </div>
+
+      <div class="sub-intro reveal">
+        <div class="eyebrow" style="text-align:center;margin-bottom:10px">Monthly Access</div>
+        <h3 class="sub-intro-h">Stay current. Unlock everything.</h3>
+        <p class="sub-intro-p">The subscription keeps CLAIR updated with new gesture packs and AI improvements — for less than a coffee per month.</p>
+      </div>
+
+      <div class="sub-grid reveal delay-1">
+
+        <div class="sub-card">
+          <div class="sub-tier-name">Starter</div>
+          <div class="sub-price-row">
+            <span class="sub-price">$4.99</span>
+            <span class="sub-per">/mo</span>
+          </div>
+          <div class="sub-was">Standard rate</div>
+          <ul class="sub-features">
+            <li class="yes">Core app + updates</li>
+            <li class="yes">ASL + BSL packs</li>
+            <li class="no">CLAIR AI assistant</li>
+            <li class="no">Community gesture packs</li>
+            <li class="no">Priority support</li>
+          </ul>
+          <a class="btn-sub" href="https://paypal.me/8GOAT8/4.99" target="_blank" rel="noopener">Get Starter</a>
+        </div>
+
+        <div class="sub-card sub-featured">
+          <div class="sub-best">BEST VALUE</div>
+          <div class="sub-tier-name">Pro</div>
+          <div class="sub-price-row">
+            <span class="sub-price-orig">$6.99</span>
+            <span class="sub-price sub-price-deal">$2.72</span>
+            <span class="sub-per">/mo</span>
+          </div>
+          <div class="sub-was">You save $4.27 every month</div>
+          <ul class="sub-features">
+            <li class="yes">Everything in Starter</li>
+            <li class="yes">CLAIR AI assistant (all modes)</li>
+            <li class="yes">Community gesture packs</li>
+            <li class="yes">New features first</li>
+            <li class="yes">Priority support</li>
+          </ul>
+          <a class="btn-sub btn-sub-primary" href="https://paypal.me/8GOAT8/2.72" target="_blank" rel="noopener">Get Pro — $2.72/mo</a>
+          <div class="sub-popular-note">Most popular choice</div>
+        </div>
+
+        <div class="sub-card sub-annual">
+          <div class="sub-sale-chip">LAUNCH SALE -40%</div>
+          <div class="sub-tier-name">Annual Pro</div>
+          <div class="sub-price-row">
+            <span class="sub-price-orig">$83.88</span>
+            <span class="sub-price">$19.99</span>
+            <span class="sub-per">/yr</span>
+          </div>
+          <div class="sub-was">That's <strong style="color:var(--blue)">$1.67/mo</strong> — 2 months free</div>
+          <ul class="sub-features">
+            <li class="yes">Everything in Pro</li>
+            <li class="yes">Full year locked in</li>
+            <li class="yes">Early access builds</li>
+            <li class="yes">Supporter badge</li>
+            <li class="yes">Name in credits</li>
+          </ul>
+          <a class="btn-sub" href="https://paypal.me/8GOAT8/19.99" target="_blank" rel="noopener">Get Annual — $19.99</a>
+        </div>
+
+      </div>
+
+      <div class="pricing-footnote reveal">
+        <span>All plans include a 7-day money-back guarantee.</span>
+        <span class="pf-sep">·</span>
+        <span>Payments processed securely via PayPal.</span>
+        <span class="pf-sep">·</span>
+        <span>Cancel any time.</span>
+      </div>
+
+    </div>
+  </section>
+
+  <style>
+  .donate-section { background: var(--ink2); }
+  .donate-bg-glow { position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 80% 50%,rgba(99,179,237,.06),transparent);pointer-events:none; }
+  .donate-inner { display:grid;grid-template-columns:1fr 1fr;gap:clamp(40px,8vw,100px);align-items:center; }
+  .donate-impact { display:flex;flex-direction:column;gap:14px; }
+  .impact-row { display:flex;align-items:flex-start;gap:14px;font-size:.95rem;color:var(--grey);line-height:1.6; }
+  .impact-dot { width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:8px; }
+  .donate-box { background:var(--ink);border:1px solid var(--border);padding:40px 36px;display:flex;flex-direction:column;gap:20px;position:relative;overflow:hidden; }
+  .donate-box::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),transparent); }
+  .donate-box-label { font-family:var(--f-mono);font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--grey); }
+  .donate-amounts { display:grid;grid-template-columns:repeat(4,1fr);gap:8px; }
+  .d-amt { padding:10px 0;border:1px solid var(--border);background:none;font-family:var(--f-mono);font-size:.78rem;letter-spacing:.12em;color:var(--grey);cursor:pointer;transition:all .22s; }
+  .d-amt:hover { border-color:var(--blue);color:var(--blue); }
+  .d-amt.active { border-color:var(--blue);color:var(--blue);background:rgba(99,179,237,.07); }
+  .donate-custom-row { display:flex;align-items:center;border:1px solid var(--border);background:var(--ink2);transition:border-color .2s; }
+  .donate-custom-row:focus-within { border-color:var(--blue); }
+  .donate-sym { padding:0 14px;font-family:var(--f-mono);font-size:.9rem;color:var(--blue);border-right:1px solid var(--border); }
+  .donate-input { flex:1;background:none;border:none;outline:none;padding:12px 14px;font-family:var(--f-mono);font-size:.9rem;color:var(--white);width:100%; }
+  .donate-input::-webkit-outer-spin-button,.donate-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+  .donate-note { font-family:var(--f-mono);font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--grey-faint);text-align:center; }
+  .btn-donate { display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;background:#003087;color:#fff;font-family:var(--f-mono);font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;transition:background .25s,transform .2s;text-decoration:none; }
+  .btn-donate:hover { background:#001e5a;transform:translateY(-2px); }
+  .donate-secure { display:flex;align-items:center;justify-content:center;gap:7px;font-family:var(--f-mono);font-size:.55rem;letter-spacing:.14em;text-transform:uppercase;color:var(--grey-faint); }
+  .sale-banner { display:flex;align-items:center;gap:14px;padding:12px 20px;border:1px solid rgba(99,179,237,.3);background:rgba(99,179,237,.05);margin-bottom:64px; }
+  .sale-pulse { width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;animation:pulse-dot 1.4s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.5)} }
+  .sale-tag { font-family:var(--f-mono);font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--blue);border:1px solid var(--blue-dim);padding:3px 8px;flex-shrink:0; }
+  .sale-text { font-family:var(--f-mono);font-size:.68rem;letter-spacing:.1em;color:var(--grey); }
+  .sale-timer { color:var(--blue); }
+  .pricing-head { text-align:center;margin-bottom:48px; }
+  .purchase-card { display:grid;grid-template-columns:1fr auto;gap:60px;align-items:center;border:1px solid var(--border);background:var(--ink2);padding:44px 48px;margin-bottom:72px;position:relative;overflow:hidden; }
+  .purchase-card::before { content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue); }
+  .purchase-label { font-family:var(--f-mono);font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--blue);margin-bottom:12px; }
+  .purchase-price { font-family:var(--f-display);font-size:3.5rem;font-weight:800;color:var(--white);line-height:1;margin-bottom:16px; }
+  .purchase-period { font-family:var(--f-mono);font-size:.9rem;color:var(--grey);font-weight:300; }
+  .purchase-desc { font-size:.95rem;color:var(--grey);line-height:1.7;max-width:420px;margin-bottom:20px; }
+  .purchase-list { display:flex;flex-direction:column;gap:8px; }
+  .purchase-list li { font-size:.9rem;color:var(--grey);padding-left:18px;position:relative; }
+  .purchase-list li::before { content:'';position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--blue);opacity:.6; }
+  .purchase-right { display:flex;flex-direction:column;align-items:center;gap:14px;min-width:220px; }
+  .btn-purchase { display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:18px 28px;background:var(--blue);color:var(--ink);font-family:var(--f-mono);font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;text-decoration:none;transition:background .25s,transform .2s;text-align:center; }
+  .btn-purchase:hover { background:#88c8f0;transform:translateY(-2px); }
+  .purchase-note { font-family:var(--f-mono);font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-faint);text-align:center;line-height:1.65; }
+  .sub-intro { text-align:center;margin-bottom:48px; }
+  .sub-intro-h { font-family:var(--f-display);font-size:clamp(1.6rem,3vw,2.4rem);font-weight:700;color:var(--white);margin-bottom:12px; }
+  .sub-intro-p { font-size:.98rem;color:var(--grey);max-width:480px;margin:0 auto;line-height:1.75; }
+  .sub-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);margin-bottom:32px; }
+  .sub-card { background:var(--ink2);padding:40px 32px;display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden;transition:background .3s; }
+  .sub-card:hover { background:var(--ink3); }
+  .sub-featured { background:var(--ink3);border:1px solid var(--blue-dim);margin:-1px;z-index:2; }
+  .sub-best { position:absolute;top:0;left:50%;transform:translateX(-50%);background:var(--blue);color:var(--ink);font-family:var(--f-mono);font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;padding:5px 16px; }
+  .sub-sale-chip { position:absolute;top:16px;right:16px;background:rgba(99,179,237,.12);border:1px solid var(--blue-dim);color:var(--blue);font-family:var(--f-mono);font-size:.52rem;letter-spacing:.16em;text-transform:uppercase;padding:4px 9px; }
+  .sub-tier-name { font-family:var(--f-display);font-size:1.3rem;font-weight:700;letter-spacing:.06em;color:var(--white);margin-top:20px; }
+  .sub-featured .sub-tier-name { margin-top:28px; }
+  .sub-price-row { display:flex;align-items:baseline;gap:6px; }
+  .sub-price { font-family:var(--f-display);font-size:2.8rem;font-weight:800;color:var(--white);line-height:1; }
+  .sub-price-deal { color:var(--blue); }
+  .sub-price-orig { font-family:var(--f-mono);font-size:.8rem;color:var(--grey-faint);text-decoration:line-through; }
+  .sub-per { font-family:var(--f-mono);font-size:.7rem;color:var(--grey); }
+  .sub-was { font-family:var(--f-mono);font-size:.6rem;letter-spacing:.12em;color:var(--grey-faint);text-transform:uppercase; }
+  .sub-features { display:flex;flex-direction:column;gap:10px;flex:1;margin:8px 0; }
+  .sub-features li { font-size:.88rem;line-height:1.5;padding-left:20px;position:relative; }
+  .sub-features li.yes { color:var(--grey); }
+  .sub-features li.no { color:var(--grey-faint);text-decoration:line-through; }
+  .sub-features li.yes::before { content:'';position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--blue);opacity:.7; }
+  .sub-features li.no::before { content:'';position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--grey-faint);opacity:.4; }
+  .btn-sub { display:block;width:100%;padding:13px 20px;border:1px solid var(--border);background:none;color:var(--grey);font-family:var(--f-mono);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;text-align:center;text-decoration:none;transition:all .25s;position:relative;overflow:hidden; }
+  .btn-sub::before { content:'';position:absolute;inset:0;background:var(--blue);transform:scaleX(0);transform-origin:left;transition:transform .3s ease;z-index:0; }
+  .btn-sub:hover { color:var(--ink);border-color:var(--blue); }
+  .btn-sub:hover::before { transform:scaleX(1); }
+  .btn-sub-primary { background:var(--blue);border-color:var(--blue);color:var(--ink); }
+  .btn-sub-primary::before { background:#88c8f0; }
+  .btn-sub-primary:hover { color:var(--ink); }
+  .sub-popular-note { font-family:var(--f-mono);font-size:.55rem;letter-spacing:.16em;text-transform:uppercase;color:var(--grey-faint);text-align:center; }
+  .pricing-footnote { display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-family:var(--f-mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--grey-faint);padding-top:24px;border-top:1px solid var(--grey-faint); }
+  .pf-sep { color:var(--blue);opacity:.4; }
+  @media(max-width:960px) {
+    .donate-inner { grid-template-columns:1fr; }
+    .purchase-card { grid-template-columns:1fr;gap:32px; }
+    .sub-grid { grid-template-columns:1fr; }
+    .sub-featured { margin:0; }
+    .donate-amounts { grid-template-columns:repeat(2,1fr); }
+  }
+  @media(max-width:600px) {
+    .purchase-card { padding:28px 24px; }
+    .donate-box { padding:28px 20px; }
+  }
+  </style>
+  <!-- ════════ FOOTER ════════ -->
+  <footer>
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand-name">CL<span>AI</span>R</div>
+          <p class="footer-brand-p">
+            Real-time AI sign language recognition.
+            Offline. Adaptive. Open source.
+            <!-- ▼ Replace with your own tagline -->
+          </p>
+          <div class="footer-socials">
+            <a class="footer-soc" href="https://github.com/YOUR_USERNAME/YOUR_REPO" target="_blank" title="GitHub">
+              <!-- ▼▼▼ Replace with your icon
+                   <img src="assets/icons/github.svg" width="16" height="16" alt="GitHub"> -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.74-1.33-1.74-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23A11.5 11.5 0 0 1 12 5.8c1.02 0 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div>
+          <div class="footer-col-t">Product</div>
+          <ul class="footer-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how">How It Works</a></li>
+            <li><a href="#demo">Demo</a></li>
+            <li><a href="#download">Download</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-col-t">Resources</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/YOUR_USERNAME/YOUR_REPO" target="_blank">GitHub</a></li>
+            <li><a href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases" target="_blank">Releases</a></li>
+            <li><a href="https://github.com/YOUR_USERNAME/YOUR_REPO/wiki" target="_blank">Docs</a></li>
+            <li><a href="https://github.com/YOUR_USERNAME/YOUR_REPO/issues" target="_blank">Report Bug</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-col-t">Legal</div>
+          <ul class="footer-links">
+            <li><a href="#">MIT License</a></li>
+            <li><a href="#">Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-copy">© 2025 CLAIR Project — All rights reserved</span>
+        <div class="footer-tags">
+          <span class="footer-tag">MIT</span>
+          <span class="footer-tag">Open Source</span>
+          <span class="footer-tag">Offline First</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- .site -->
+
+<!-- ════════ JS ════════ -->
+<script src="js/particles.min.js"></script>
+<script>
+/* ── Particles config ───────────────────────────────────────────── */
+particlesJS('particles-js', {
+  particles: {
+    number: { value: 48, density: { enable: true, value_area: 1000 } },
+    color:  { value: ['#63b3ed', '#2d6a9f', '#1a3a5c'] },
+    shape:  { type: 'circle' },
+    opacity: {
+      value: 0.4, random: true,
+      anim: { enable: true, speed: 0.5, opacity_min: 0.04, sync: false }
+    },
+    size: { value: 2, random: true, anim: { enable: false } },
+    line_linked: {
+      enable: true, distance: 140,
+      color: '#1a3a5c', opacity: 0.25, width: 1
+    },
+    move: {
+      enable: true, speed: 0.7, direction: 'none',
+      random: true, straight: false, out_mode: 'out'
+    }
+  },
+  interactivity: {
+    detect_on: 'window',
+    events: {
+      onhover: { enable: true,  mode: 'grab' },
+      onclick: { enable: true,  mode: 'push' },
+      resize:  true
+    },
+    modes: {
+      grab: { distance: 160, line_linked: { opacity: .55 } },
+      push: { particles_nb: 2 }
+    }
+  },
+  retina_detect: true
+});
+
+/* ── Nav sticky ─────────────────────────────────────────────────── */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('stuck', scrollY > 50);
+}, { passive: true });
+
+/* ── Mobile nav ─────────────────────────────────────────────────── */
+const mn = document.getElementById('mobileNav');
+function navOpen()  { mn.classList.add('open');    document.body.style.overflow = 'hidden'; }
+function navClose() { mn.classList.remove('open'); document.body.style.overflow = ''; }
+
+/* ── Reveal on scroll ───────────────────────────────────────────── */
+const revObs = new IntersectionObserver(
+  entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); }),
+  { threshold: 0.1 }
+);
+document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+
+/* ── OS detection ───────────────────────────────────────────────── */
+(function() {
+  const ua  = navigator.userAgent.toLowerCase();
+  const map = { 'mac': 'os-mac', 'linux': 'os-linux', 'win': 'os-win' };
+  const key = ua.includes('mac') ? 'mac' : ua.includes('linux') && !ua.includes('android') ? 'linux' : 'win';
+  document.getElementById(map[key])?.classList.add('active');
+})();
+
+/* ── Alphabet grid ──────────────────────────────────────────────── */
+const alphaEl = document.getElementById('alpha');
+'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(l => {
+  const c = document.createElement('div');
+  c.className = 'alpha-cell';
+  c.id = 'ac-' + l;
+  c.textContent = l;
+  alphaEl.appendChild(c);
+});
+
+/* ── Browser demo ───────────────────────────────────────────────── */
+let demoStream, demoActive = false, demoFrame, demoTick = 0, lastLit = '';
+
+async function startDemo() {
+  try {
+    demoStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }, audio: false
+    });
+    const vid = document.getElementById('dv');
+    vid.srcObject = demoStream;
+    await vid.play();
+    document.getElementById('dg').classList.add('gone');
+    demoActive = true;
+    runDemo();
+  } catch {
+    alert('Camera access denied. Please allow camera access in your browser settings.');
+  }
+}
+
+function runDemo() {
+  const canvas = document.getElementById('dc');
+  const ctx    = canvas.getContext('2d');
+  const vid    = document.getElementById('dv');
+  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let word = '';
+
+  function draw() {
+    if (!demoActive) return;
+    canvas.width  = vid.videoWidth  || 640;
+    canvas.height = vid.videoHeight || 480;
+    demoTick++;
+
+    const letter = LETTERS[Math.floor(demoTick / 80) % LETTERS.length];
+    const conf   = 72 + Math.floor(Math.sin(demoTick * 0.08) * 20);
+
+    // HUD corners
+    const pad = 20, arm = 36;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#63b3ed';
+    ctx.lineWidth = 1.5;
+    [[pad,pad,1,1],[canvas.width-pad,pad,-1,1],[pad,canvas.height-pad,1,-1],[canvas.width-pad,canvas.height-pad,-1,-1]]
+      .forEach(([x,y,dx,dy]) => {
+        ctx.beginPath();
+        ctx.moveTo(x + dx*arm, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y + dy*arm);
+        ctx.stroke();
+      });
+
+    // Letter flash
+    if (demoTick % 80 === 0) {
+      word = (word + letter).slice(-6);
+      document.getElementById('dl-l').textContent = letter;
+      document.getElementById('dl-w').textContent = 'Word: ' + word;
+      document.getElementById('dl-p').textContent = conf + '%';
+      if (lastLit) document.getElementById('ac-' + lastLit)?.classList.remove('lit');
+      document.getElementById('ac-' + letter)?.classList.add('lit');
+      lastLit = letter;
+    }
+
+    // Scanline pulse
+    const pulse = 0.04 + 0.03 * Math.sin(demoTick * 0.05);
+    ctx.fillStyle = `rgba(99,179,237,${pulse})`;
+    const bar = (demoTick * 3) % canvas.height;
+    ctx.fillRect(0, bar, canvas.width, 2);
+
+    demoFrame = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && demoStream) {
+    demoStream.getTracks().forEach(t => t.stop());
+    demoActive = false;
+    cancelAnimationFrame(demoFrame);
+  }
+});
+/* ── Sale countdown timer ── */
+(function() {
+  var K = 'clair_sale_end';
+  var e = sessionStorage.getItem(K);
+  if (!e) {
+    e = Date.now() + 48 * 60 * 60 * 1000;
+    sessionStorage.setItem(K, e);
+  }
+  function tick() {
+    var el = document.getElementById('sale-timer');
+    if (!el) return;
+    var left = Math.max(0, e - Date.now());
+    var h = String(Math.floor(left / 3600000)).padStart(2, '0');
+    var m = String(Math.floor((left % 3600000) / 60000)).padStart(2, '0');
+    var s = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
+    el.textContent = h + ':' + m + ':' + s;
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+/* ── Donate button dynamic amount ── */
+function setDonate(amt) {
+  document.getElementById('donateInput').value = amt;
+  document.querySelectorAll('.d-amt').forEach(function(b) {
+    b.classList.toggle('active', parseFloat(b.textContent.replace('$', '')) === amt);
+  });
+  document.getElementById('donateBtn').href = 'https://paypal.me/8GOAT8/' + amt;
+}
+function syncDonate(val) {
+  document.querySelectorAll('.d-amt').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  var n = parseFloat(val);
+  if (!isNaN(n) && n > 0) {
+    document.getElementById('donateBtn').href = 'https://paypal.me/8GOAT8/' + n;
+  }
+}
+</script>
+
+</body>
+</html>
