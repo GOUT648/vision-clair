@@ -1,28 +1,102 @@
-Proiectul ăsta e un translator real-time pentru limbajul semnelor (ASL). Ideea e simplă, dar cu impact: folosești o cameră web ca să citești semnele făcute cu mâna, iar codul le transformă în cuvinte și le rostește cu voce tare. Scopul e clar – să ajute persoanele cu deficiențe de auz sau vorbire să comunice natural cu oricine, chiar dacă persoana din fața lor nu știe deloc limbajul semnelor.
+Vision-Clair
+Vision-Clair is a real-time, hybrid Edge/Cloud AI system designed to bridge the communication gap between individuals who use American Sign Language (ASL) and those who do not.
 
-Pe partea tehnică, am scris totul în Python pentru că e cel mai eficient ecosistem pentru Machine Learning și Computer Vision. Arhitectura are două piese mari:
+Using a standard webcam, the system reads ASL fingerspelling frame-by-frame, buffers the letters into words, corrects grammar using Large Language Models, and vocalizes the final sentence using high-fidelity Text-to-Speech.
 
-1. Detectarea și controlul (Computer Vision)
-Folosesc OpenCV pentru captarea imaginii și MediaPipe pentru tracking-ul mâinii. MediaPipe e super rapid: îmi găsește instant coordonatele degetelor și îmi face crop exact pe zona în care se află mâna. Pe lângă asta, am mapat niște gesturi logice folosind geometria degetelor pentru sistemul de control: degetul în jos face "delete", pumnul dă "space", iar semnul păcii (V) declanșează vorbirea propoziției.
+Built By
+Gheorghe Chirica
 
-2. Creierul de Machine Learning (CNN)
-Aici intră în joc fișierele de training. Pentru date, am mers pe o sugestie de la băieții de la Sigmoid și am luat dataset-ul Sign Language MNIST de pe Kaggle. E practic un standard bun, având mii de imagini convertite în valori de pixeli în acele fișiere CSV.
+Alexandra Ciobanu
 
-În train.py, am construit o Rețea Neuronală Convoluțională (CNN) folosind TensorFlow și Keras. Structura e clasică și stabilă:
+Features
+Real-Time Edge ML: Uses a custom Convolutional Neural Network (CNN) trained on the Sign Language MNIST dataset to detect static ASL letters (A-Y, excluding motion-based J and Z).
 
-Straturi Conv2D și MaxPooling2D ca să extragă tiparele vizuale (margini, unghiuri) din imagini.
+Smart Buffering: Implements a frame-holding queue to prevent accidental keystrokes and "debounces" camera inputs for accurate spelling.
 
-Un strat Flatten care aduce datele pe o singură dimensiune.
+Geometric System Controls: Uses lightning-fast, rule-based MediaPipe hand geometry to trigger system actions without straining the ML model.
 
-Straturi Dense pentru a clasifica imaginile în literele de la A la Y.
+AI Grammar Correction: Passes raw, fingerspelled text through Google Gemini 2.5 Flash to fix typos, add punctuation, and humanize the sentence.
 
-Am adăugat și un Dropout(0.5) pentru a dezactiva random neuroni în timpul antrenamentului, chestie care previne overfitting-ul (adică modelul să nu memoreze pozele pe de rost, ci să învețe logica).
+Natural Vocalization: Integrates ElevenLabs API to speak the polished sentence out loud instantly.
 
-După 15 epoci de antrenament, codul salvează toată "experiența" în fișierul model.h5. E un model lightweight, optimizat să ruleze lejer pe un procesor normal.
+Tech Stack
+Computer Vision: OpenCV, Google MediaPipe (Tasks API)
 
-Flow-ul complet (main.py)
-Când pornești camera, MediaPipe izolează mâna, redimensionează pătrățelul la 28x28 pixeli (exact cum a fost antrenat modelul) și îl dă rețelei CNN să ghicească litera. Literele se adună progresiv în cuvinte.
+Machine Learning: TensorFlow, Keras, Pandas, NumPy
 
-Când arăți semnul păcii, se întâmplă magia de la final: textul brut, care poate mai are greșeli sau îi lipsește punctuația, este aruncat printr-un prompt către API-ul Gemini 2.5 Flash. Gemini corectează instant propoziția, o face să sune uman, și o trimite mai departe spre ElevenLabs. ElevenLabs generează fișierul audio cu o voce naturală și îl redă în difuzoare.
+Cloud AI / APIs: Google Generative AI (Gemini), ElevenLabs (TTS)
 
-E construit să fie modular, rulând pe un mediu virtual curat setat din requirements.txt, cu caching pe partea de AI ca să nu ardă aiurea credite la request-uri repetate.
+Environment: Python 3.11, python-dotenv
+
+Getting Started
+1. Prerequisites
+You must have Python 3.11 installed on your system.
+You will also need API keys from:
+
+Google AI Studio (Gemini)
+
+ElevenLabs
+
+Create a .env file in the root directory and add your keys:
+
+Fragment de cod
+GEMINI_API_KEY=your_gemini_key_here
+ELEVENLABS_API_KEY=your_elevenlabs_key_here
+ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
+2. Installation
+Clone the repository and set up a virtual environment:
+
+Bash
+# Clone the repository
+git clone https://github.com/GOUT648/vision-clair.git
+cd vision-clair
+
+# Create and activate a virtual environment
+python -m venv venv
+
+# On Windows:
+venv\Scripts\activate
+
+# On Mac/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+3. Training the Brain (One-Time Setup)
+Before running the camera, you must train the neural network on the provided MNIST dataset to generate the model.h5 file.
+
+Bash
+python train.py
+Note: This will take 1-3 minutes depending on your CPU. It will automatically save the model to your folder upon reaching 15 epochs.
+
+4. Running Vision-Clair
+Once the model is trained, launch the live camera translation engine:
+
+Bash
+python main.py
+How to Use (Gesture Controls)
+Hold your hand up to the webcam. The system will automatically crop your hand and begin reading ASL letters.
+
+To control the flow of text, use the following built-in geometric gestures:
+
+Type Letters (A-Y): Hold the ASL sign steady.
+
+Space (End Word): Hold up an Open Palm (all four fingers extended).
+
+Delete (Backspace): Give a Thumbs Down gesture.
+
+Speak Sentence: Hold up a Peace Sign (V). This triggers the AI to polish your built sentence and speak it aloud.
+
+Press q on your keyboard while the window is active to quit the application.
+
+Project Structure
+Plaintext
+vision-clair/
+├── .env                    # API Keys (Not tracked by Git)
+├── .gitignore              # Ignores large files and virtual envs
+├── index.html              # Marketing Landing Page
+├── main.py                 # Core application and camera loop
+├── requirements.txt        # Python dependencies
+├── sign_mnist_test.csv     # Kaggle Dataset (Testing)
+├── sign_mnist_train.csv    # Kaggle Dataset (Training)
+└── train.py                # TensorFlow CNN builder
